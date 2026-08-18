@@ -74,7 +74,7 @@ async def agent_v2(
     request: AgentRequest,
 ):
 
-    result = agent_graph.invoke(
+    result = await agent_graph.ainvoke(
         {
             "messages": [
                 HumanMessage(
