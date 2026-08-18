@@ -2,18 +2,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from langchain_core.messages import HumanMessage
+
 from app.services.rag import ask_rag
 from app.schemas.analysis import (
     AnalysisRequest,
     AnalysisResponse,
 )
-from fastapi.middleware.cors import CORSMiddleware
 from app.services.gemini import (
     analyze_question,
     run_agent,
 )
-
-from app.services.rag import ask_rag
 from app.agent.graph import agent_graph
 
 
@@ -22,13 +20,11 @@ app = FastAPI(
     version="0.1.0",
 )
 
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "https://ai-operations-platform-iota.vercel.app",
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
