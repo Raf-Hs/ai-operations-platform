@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from langchain_core.messages import HumanMessage
-
+from app.services.rag import ask_rag
 from app.schemas.analysis import (
     AnalysisRequest,
     AnalysisResponse,
