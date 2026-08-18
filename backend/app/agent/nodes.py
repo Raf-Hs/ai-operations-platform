@@ -10,7 +10,7 @@ from app.agent.state import AgentState
 from app.tools.sales import get_sales
 from app.tools.customers import get_customer
 from app.tools.inventory import get_inventory
-
+from app.tools.documents import search_documents_tool
 
 llm = ChatGoogleGenerativeAI(
     model="gemini-3.5-flash-lite",
@@ -23,6 +23,7 @@ tools = [
     get_sales,
     get_customer,
     get_inventory,
+    search_documents_tool,
 ]
 
 
