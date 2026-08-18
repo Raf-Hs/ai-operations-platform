@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from langchain_core.messages import HumanMessage
-
+from app.rag.indexer import index_documents
 from app.services.rag import ask_rag
 from app.schemas.analysis import (
     AnalysisRequest,
@@ -19,7 +19,18 @@ app = FastAPI(
     title="AI Operations Platform",
     version="0.1.0",
 )
+@app.on_event("startup")
+async def startup_event():
 
+    print("Starting document indexing...")
+
+    result = await index_documents()
+
+    print(
+        f"RAG indexing complete: "
+        f"{result['documents']} documents, "
+        f"{result['chunks']} chunks"
+    )
 
 app.add_middleware(
     CORSMiddleware,

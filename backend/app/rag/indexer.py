@@ -38,7 +38,7 @@ async def index_documents():
             for index in range(len(chunks))
         ]
 
-        collection.add(
+        collection.upsert(
             ids=ids,
             documents=chunks,
             embeddings=embeddings,
