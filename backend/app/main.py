@@ -1,18 +1,29 @@
 from fastapi import FastAPI
-from app.services.rag import ask_rag
+from pydantic import BaseModel
+from langchain_core.messages import HumanMessage
 
 from app.schemas.analysis import (
     AnalysisRequest,
     AnalysisResponse,
 )
 
-from app.services.gemini import analyze_question
+from app.services.gemini import (
+    analyze_question,
+    run_agent,
+)
+
+from app.services.rag import ask_rag
+from app.agent.graph import agent_graph
 
 
 app = FastAPI(
     title="AI Operations Platform",
     version="0.1.0",
 )
+
+
+class AgentRequest(BaseModel):
+    question: str
 
 
 @app.get("/health")
@@ -35,6 +46,7 @@ async def analyze(request: AnalysisRequest):
 
     return result
 
+
 @app.post("/api/rag")
 async def rag(request: AnalysisRequest):
 
@@ -43,3 +55,37 @@ async def rag(request: AnalysisRequest):
     )
 
     return result
+
+
+@app.post("/api/agent")
+async def agent(request: AnalysisRequest):
+
+    result = await run_agent(
+        request.question
+    )
+
+    return {
+        "answer": result
+    }
+
+
+@app.post("/api/agent/v2")
+async def agent_v2(
+    request: AgentRequest,
+):
+
+    result = agent_graph.invoke(
+        {
+            "messages": [
+                HumanMessage(
+                    content=request.question
+                )
+            ]
+        }
+    )
+
+    final_message = result["messages"][-1]
+
+    return {
+        "answer": final_message.content
+    }

@@ -1,20 +1,40 @@
 import asyncio
 
-from app.rag.retriever import retrieve
+from app.rag.retriever import search_documents
 
 
 async def main():
 
-    results = await retrieve(
-        "¿Quién puede aprobar una devolución de $15,000?"
+    query = "¿Cuál es la política de devoluciones?"
+
+    results = await search_documents(
+        query,
+        top_k=3,
     )
 
-    for index, result in enumerate(results):
+    print()
+    print("QUERY")
+    print(query)
 
-        print(f"\n--- RESULT {index + 1} ---")
-        print(f"Source: {result['source']}")
-        print(f"Distance: {result['distance']}")
-        print(result["content"])
+    print()
+    print("RESULTS")
+
+    for index, result in enumerate(
+        results,
+        start=1,
+    ):
+
+        print()
+        print(f"--- Result {index} ---")
+        print(
+            f"Source: {result['source']}"
+        )
+        print(
+            f"Distance: {result['distance']}"
+        )
+        print(
+            f"Content: {result['content']}"
+        )
 
 
 asyncio.run(main())

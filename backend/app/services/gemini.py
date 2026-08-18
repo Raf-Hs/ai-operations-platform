@@ -3,9 +3,14 @@ import os
 from dotenv import load_dotenv
 from google import genai
 from pydantic import BaseModel
-
+from google.genai import types
 load_dotenv()
-
+from app.tools.definitions import (
+    sales_tool,
+    customer_tool,
+    inventory_tool,
+)
+from app.tools.registry import execute_tool
 
 class GeminiResponse(BaseModel):
     answer: str
@@ -81,3 +86,75 @@ Retrieved context:
     )
 
     return GeminiResponse.model_validate_json(response.text)
+
+async def run_agent(
+    question: str,
+) -> str:
+
+    tools = [
+        types.Tool(
+            function_declarations=[
+                types.FunctionDeclaration(
+                    name=sales_tool["name"],
+                    description=sales_tool["description"],
+                    parameters=sales_tool["parameters"],
+                ),
+                types.FunctionDeclaration(
+                    name=customer_tool["name"],
+                    description=customer_tool["description"],
+                    parameters=customer_tool["parameters"],
+                ),
+                types.FunctionDeclaration(
+                    name=inventory_tool["name"],
+                    description=inventory_tool["description"],
+                    parameters=inventory_tool["parameters"],
+                ),
+            ]
+        )
+    ]
+
+    response = await client.aio.models.generate_content(
+        model="gemini-3.5-flash-lite",
+        contents=question,
+        config=types.GenerateContentConfig(
+            tools=tools,
+        ),
+    )
+
+    if not response.function_calls:
+        return response.text
+
+    function_call = response.function_calls[0]
+
+    print(
+        f"[TOOL CALL] {function_call.name}"
+    )
+
+    print(
+        f"[TOOL ARGS] {function_call.args}"
+    )
+    tool_result = execute_tool(
+        function_call.name,
+        function_call.args or {},
+    )
+    
+    tool_response = types.Part.from_function_response(
+        name=function_call.name,
+        response=tool_result,
+    )
+    print(
+        f"[TOOL RESULT] {tool_result}"
+    )
+    final_response = await client.aio.models.generate_content(
+        model="gemini-3.5-flash-lite",
+        contents=[
+            question,
+            response.candidates[0].content,
+            tool_response,
+        ],
+        config=types.GenerateContentConfig(
+            tools=tools,
+        ),
+    )
+
+    return final_response.text
