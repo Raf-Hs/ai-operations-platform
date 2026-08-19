@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import "./App.css";
 
@@ -7,10 +7,25 @@ const API_URL = import.meta.env.VITE_API_URL;
 type Language = "es" | "en";
 type Theme = "dark" | "light";
 
+interface AgentResponse {
+  answer: unknown;
+}
+
+interface DocumentItem {
+  name: string;
+  content: string;
+}
+
+interface Metric {
+  label: string;
+  value: string;
+  type: "money" | "number";
+}
+
 const content = {
   es: {
     brand: "NEXAOPS AI",
-    product: "AI OPERATIONS INTELLIGENCE",
+    product: "INTELIGENCIA OPERATIVA CON IA",
 
     heroTitle: "Inteligencia operativa",
     heroAccent: "para decisiones reales.",
@@ -19,9 +34,8 @@ const content = {
       "Un agente de IA que conecta datos operativos, conocimiento empresarial y herramientas para responder preguntas de negocio.",
 
     ask: "CONSULTA AL AGENTE",
-
     placeholder:
-      "Pregunta algo sobre ventas, inventario, clientes o políticas...",
+      "Pregunta sobre ventas, inventario, clientes o políticas...",
 
     analyze: "Analizar",
     analyzing: "Analizando...",
@@ -29,37 +43,38 @@ const content = {
     examples: "Escenarios",
 
     response: "RESPUESTA DEL AGENTE",
+    generated: "RESPUESTA GENERADA",
 
     howWorks: "CÓMO FUNCIONA",
     howWorksTitle: "De una pregunta a una decisión.",
     howWorksDescription:
-      "NexaOps analiza la intención, selecciona herramientas, recupera información y construye una respuesta basada en datos.",
+      "El agente interpreta la consulta, determina qué información necesita, consulta las fuentes correspondientes y construye una respuesta.",
 
     steps: [
       {
         number: "01",
-        title: "Understand",
+        title: "Entender",
         description:
           "Gemini interpreta la intención y determina qué información necesita.",
         icon: "✦",
       },
       {
         number: "02",
-        title: "Orchestrate",
+        title: "Coordinar",
         description:
-          "LangGraph coordina las herramientas necesarias para resolver la consulta.",
+          "LangGraph decide qué herramientas deben intervenir en la consulta.",
         icon: "⌘",
       },
       {
         number: "03",
-        title: "Retrieve",
+        title: "Consultar",
         description:
-          "El agente consulta PostgreSQL y recupera conocimiento mediante RAG.",
+          "El sistema consulta PostgreSQL y recupera conocimiento mediante RAG.",
         icon: "⌕",
       },
       {
         number: "04",
-        title: "Reason",
+        title: "Analizar",
         description:
           "Gemini combina los resultados y genera una respuesta contextualizada.",
         icon: "✧",
@@ -68,19 +83,32 @@ const content = {
 
     architecture: "ARQUITECTURA",
     architectureDescription:
-      "Cada componente cumple una responsabilidad específica dentro del flujo de decisión.",
+      "Cada componente tiene una responsabilidad específica dentro del flujo de decisión.",
 
-    docs: "API Docs",
-    online: "SYSTEM ONLINE",
+    docs: "Documentación de API",
+    documents: "DOCUMENTOS DE REFERENCIA",
+    documentsTitle: "Conocimiento empresarial",
+    documentsDescription:
+      "Estos documentos forman parte de la base de conocimiento utilizada por el agente.",
 
-    scenariosTitle: "ESCENARIOS SUGERIDOS",
-    statusTitle: "SYSTEM STATUS",
-    statusDescription: "Todos los sistemas operativos",
+    viewDocument: "Ver documento",
+    closeDocument: "Cerrar documento",
+    indexed: "INDEXADO",
 
-    footer: "NexaOps AI · Agentic AI + RAG",
+    statusTitle: "ESTADO DEL SISTEMA",
+    statusDescription: "Todos los servicios operativos",
+    online: "SISTEMA ACTIVO",
+
+    insights: "INDICADORES DETECTADOS",
+    salesChart: "Resumen de ventas",
+
+    footer: "NexaOps AI · Agentes + RAG",
 
     error:
       "No fue posible conectar con el backend. Verifica que la API esté disponible.",
+
+    loadingDocuments: "Cargando documentos...",
+    noDocuments: "No hay documentos disponibles.",
   },
 
   en: {
@@ -94,9 +122,8 @@ const content = {
       "An AI agent that connects operational data, business knowledge and tools to answer real business questions.",
 
     ask: "ASK THE AGENT",
-
     placeholder:
-      "Ask something about sales, inventory, customers or policies...",
+      "Ask about sales, inventory, customers or company policies...",
 
     analyze: "Analyze",
     analyzing: "Analyzing...",
@@ -104,11 +131,12 @@ const content = {
     examples: "Scenarios",
 
     response: "AGENT RESPONSE",
+    generated: "RESPONSE GENERATED",
 
     howWorks: "HOW IT WORKS",
     howWorksTitle: "From a question to a decision.",
     howWorksDescription:
-      "NexaOps analyzes the request, selects the required tools, retrieves information and builds a data-backed response.",
+      "The agent interprets the request, determines what information is needed, queries the appropriate sources and builds a contextual response.",
 
     steps: [
       {
@@ -122,14 +150,14 @@ const content = {
         number: "02",
         title: "Orchestrate",
         description:
-          "LangGraph coordinates the tools required to solve the request.",
+          "LangGraph decides which tools need to participate in the request.",
         icon: "⌘",
       },
       {
         number: "03",
         title: "Retrieve",
         description:
-          "The agent queries PostgreSQL and retrieves knowledge through RAG.",
+          "The system queries PostgreSQL and retrieves knowledge through RAG.",
         icon: "⌕",
       },
       {
@@ -145,36 +173,49 @@ const content = {
     architectureDescription:
       "Each component has a specific responsibility within the decision workflow.",
 
-    docs: "API Docs",
+    docs: "API Documentation",
+    documents: "REFERENCE DOCUMENTS",
+    documentsTitle: "Business knowledge",
+    documentsDescription:
+      "These documents are part of the knowledge base used by the agent.",
+
+    viewDocument: "View document",
+    closeDocument: "Close document",
+    indexed: "INDEXED",
+
+    statusTitle: "SYSTEM STATUS",
+    statusDescription: "All services operational",
     online: "SYSTEM ONLINE",
 
-    scenariosTitle: "SUGGESTED SCENARIOS",
-    statusTitle: "SYSTEM STATUS",
-    statusDescription: "All operational systems",
+    insights: "DETECTED METRICS",
+    salesChart: "Sales summary",
 
-    footer: "NexaOps AI · Agentic AI + RAG",
+    footer: "NexaOps AI · Agents + RAG",
 
     error:
       "Unable to connect to the backend. Verify that the API is available.",
+
+    loadingDocuments: "Loading documents...",
+    noDocuments: "No documents available.",
   },
 };
 
 const examples = {
   es: [
     {
-      label: "Sales Intelligence",
-      description: "Ventas y ticket promedio",
+      label: "Inteligencia de ventas",
+      description: "Ventas y valor promedio",
       question:
         "¿Cuánto vendimos este mes y cuál es nuestro ticket promedio?",
     },
     {
-      label: "Inventory Risk",
-      description: "Riesgos relacionados con inventario",
+      label: "Riesgo de inventario",
+      description: "Ventas relacionadas con existencias",
       question:
         "Analiza las ventas de este mes y dime si tenemos algún problema de inventario que pueda estar relacionado.",
     },
     {
-      label: "Policy + Sales",
+      label: "Política + ventas",
       description: "Ventas y políticas empresariales",
       question:
         "¿Cuánto vendimos este mes y cuál es la política para devoluciones superiores a $10,000 MXN?",
@@ -183,19 +224,19 @@ const examples = {
 
   en: [
     {
-      label: "Sales Intelligence",
+      label: "Sales intelligence",
       description: "Sales and average order value",
       question:
         "How much did we sell this month and what is our average order value?",
     },
     {
-      label: "Inventory Risk",
-      description: "Inventory-related risks",
+      label: "Inventory risk",
+      description: "Sales related to inventory",
       question:
         "Analyze this month's sales and tell me if we have any related inventory risks.",
     },
     {
-      label: "Policy + Sales",
+      label: "Policy + sales",
       description: "Sales and company policies",
       question:
         "How much did we sell this month and what is the policy for refunds above $10,000 MXN?",
@@ -206,40 +247,186 @@ const examples = {
 const architecture = [
   {
     name: "Gemini",
-    type: "LLM",
-    description: "Reasoning",
+    typeEs: "MODELO",
+    typeEn: "MODEL",
+    descriptionEs: "Razonamiento",
+    descriptionEn: "Reasoning",
   },
   {
     name: "LangGraph",
-    type: "AGENT",
-    description: "Orchestration",
+    typeEs: "AGENTE",
+    typeEn: "AGENT",
+    descriptionEs: "Coordinación",
+    descriptionEn: "Orchestration",
   },
   {
     name: "PostgreSQL",
-    type: "DATA",
-    description: "Operational data",
+    typeEs: "DATOS",
+    typeEn: "DATA",
+    descriptionEs: "Datos operativos",
+    descriptionEn: "Operational data",
   },
   {
     name: "ChromaDB",
-    type: "RAG",
-    description: "Knowledge retrieval",
+    typeEs: "RAG",
+    typeEn: "RAG",
+    descriptionEs: "Conocimiento",
+    descriptionEn: "Knowledge",
   },
   {
     name: "FastAPI",
-    type: "API",
-    description: "Backend service",
+    typeEs: "API",
+    typeEn: "API",
+    descriptionEs: "Servicio backend",
+    descriptionEn: "Backend service",
   },
 ];
 
-interface AgentResponse {
-  answer: unknown;
+function extractMetrics(text: string): Metric[] {
+  const metrics: Metric[] = [];
+
+  const revenueMatch = text.match(
+    /(?:ingresos|ventas)[^$]{0,80}\$?([\d,]+(?:\.\d+)?)\s*MXN/i
+  );
+
+  const ordersMatch = text.match(
+    /(\d+)\s+(?:pedidos|órdenes|ordenes)/i
+  );
+
+  const averageMatch = text.match(
+    /(?:valor promedio|promedio por pedido|ticket promedio)[^$]{0,50}\$?([\d,]+(?:\.\d+)?)\s*MXN/i
+  );
+
+  if (revenueMatch) {
+    metrics.push({
+      label: "Ventas totales",
+      value: `$${revenueMatch[1]} MXN`,
+      type: "money",
+    });
+  }
+
+  if (ordersMatch) {
+    metrics.push({
+      label: "Pedidos",
+      value: ordersMatch[1],
+      type: "number",
+    });
+  }
+
+  if (averageMatch) {
+    metrics.push({
+      label: "Valor promedio",
+      value: `$${averageMatch[1]} MXN`,
+      type: "money",
+    });
+  }
+
+  return metrics;
+}
+
+function SalesVisual({
+  answer,
+  language,
+}: {
+  answer: string;
+  language: Language;
+}) {
+  const metrics = useMemo(
+    () => extractMetrics(answer),
+    [answer]
+  );
+
+  if (metrics.length === 0) {
+    return null;
+  }
+
+  const numericValues = metrics.map((metric) => {
+    const value = Number(
+      metric.value
+        .replace("$", "")
+        .replace("MXN", "")
+        .replace(/,/g, "")
+        .trim()
+    );
+
+    return value;
+  });
+
+  const maxValue = Math.max(...numericValues, 1);
+
+  return (
+    <div className="insights">
+      <div className="insights-header">
+        <span className="section-label">
+          {content[language].insights}
+        </span>
+
+        <span className="insights-source">
+          DATOS DE LA CONSULTA
+        </span>
+      </div>
+
+      <div className="metric-grid">
+        {metrics.map((metric) => (
+          <div className="metric-card" key={metric.label}>
+            <span>{metric.label}</span>
+            <strong>{metric.value}</strong>
+          </div>
+        ))}
+      </div>
+
+      {metrics.length >= 2 && (
+        <div className="chart-card">
+          <div className="chart-title">
+            {content[language].salesChart}
+          </div>
+
+          <div className="chart">
+            {metrics.map((metric, index) => {
+              const numericValue = numericValues[index];
+
+              const height = Math.max(
+                12,
+                (numericValue / maxValue) * 100
+              );
+
+              return (
+                <div
+                  className="chart-column"
+                  key={metric.label}
+                >
+                  <div className="chart-value">
+                    {metric.value}
+                  </div>
+
+                  <div className="chart-track">
+                    <div
+                      className="chart-bar"
+                      style={{
+                        height: `${height}%`,
+                      }}
+                    />
+                  </div>
+
+                  <span>{metric.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function App() {
-  const [language, setLanguage] = useState<Language>("es");
+  const [language, setLanguage] =
+    useState<Language>("es");
 
   const [theme, setTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem("nexaops-theme");
+    const saved = localStorage.getItem(
+      "nexaops-theme"
+    );
 
     return saved === "light" ? "light" : "dark";
   });
@@ -249,20 +436,52 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const [documents, setDocuments] = useState<
+    DocumentItem[]
+  >([]);
+
+  const [selectedDocument, setSelectedDocument] =
+    useState<DocumentItem | null>(null);
+
   const t = content[language];
   const currentExamples = examples[language];
 
-  const changeTheme = () => {
-    const nextTheme = theme === "dark" ? "light" : "dark";
-
-    setTheme(nextTheme);
-
+  useEffect(() => {
     document.documentElement.classList.toggle(
       "light",
-      nextTheme === "light"
+      theme === "light"
     );
 
-    localStorage.setItem("nexaops-theme", nextTheme);
+    localStorage.setItem(
+      "nexaops-theme",
+      theme
+    );
+  }, [theme]);
+
+  useEffect(() => {
+    const loadDocuments = async () => {
+      try {
+        const response = await fetch(
+          `${API_URL}/api/documents`
+        );
+
+        if (!response.ok) return;
+
+        const data = await response.json();
+
+        setDocuments(data.documents ?? []);
+      } catch {
+        setDocuments([]);
+      }
+    };
+
+    loadDocuments();
+  }, []);
+
+  const changeTheme = () => {
+    setTheme((current) =>
+      current === "dark" ? "light" : "dark"
+    );
   };
 
   const analyze = async () => {
@@ -273,23 +492,29 @@ function App() {
     setAnswer("");
 
     try {
-      const response = await fetch(`${API_URL}/api/agent/v2`, {
-        method: "POST",
+      const response = await fetch(
+        `${API_URL}/api/agent/v2`,
+        {
+          method: "POST",
 
-        headers: {
-          "Content-Type": "application/json",
-        },
+          headers: {
+            "Content-Type": "application/json",
+          },
 
-        body: JSON.stringify({
-          question,
-        }),
-      });
+          body: JSON.stringify({
+            question,
+          }),
+        }
+      );
 
       if (!response.ok) {
-        throw new Error("Backend request failed");
+        throw new Error(
+          "Backend request failed"
+        );
       }
 
-      const data: AgentResponse = await response.json();
+      const data: AgentResponse =
+        await response.json();
 
       const rawAnswer = data.answer;
 
@@ -301,7 +526,9 @@ function App() {
               item !== null &&
               "text" in item
             ) {
-              return String(item.text ?? "");
+              return String(
+                item.text ?? ""
+              );
             }
 
             return "";
@@ -310,10 +537,18 @@ function App() {
           .join("\n\n");
 
         setAnswer(text);
-      } else if (typeof rawAnswer === "string") {
+      } else if (
+        typeof rawAnswer === "string"
+      ) {
         setAnswer(rawAnswer);
       } else {
-        setAnswer(JSON.stringify(rawAnswer, null, 2));
+        setAnswer(
+          JSON.stringify(
+            rawAnswer,
+            null,
+            2
+          )
+        );
       }
     } catch {
       setError(t.error);
@@ -324,13 +559,11 @@ function App() {
 
   return (
     <main className="app">
-      {/* =====================================================
-          HEADER
-      ====================================================== */}
-
       <header className="header">
         <div className="brand">
-          <div className="brand-mark">N</div>
+          <div className="brand-mark">
+            N
+          </div>
 
           <div>
             <strong>{t.brand}</strong>
@@ -351,15 +584,27 @@ function App() {
 
           <div className="language-switch">
             <button
-              className={language === "es" ? "active" : ""}
-              onClick={() => setLanguage("es")}
+              className={
+                language === "es"
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                setLanguage("es")
+              }
             >
               ES
             </button>
 
             <button
-              className={language === "en" ? "active" : ""}
-              onClick={() => setLanguage("en")}
+              className={
+                language === "en"
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                setLanguage("en")
+              }
             >
               EN
             </button>
@@ -368,7 +613,6 @@ function App() {
           <button
             className="theme-button"
             onClick={changeTheme}
-            aria-label="Change theme"
           >
             {theme === "dark" ? "☼" : "☾"}
           </button>
@@ -380,15 +624,9 @@ function App() {
         </nav>
       </header>
 
-      {/* =====================================================
-          THREE COLUMN WORKSPACE
-      ====================================================== */}
-
       <div className="workspace">
 
-        {/* ===================================================
-            LEFT
-        ==================================================== */}
+        {/* IZQUIERDA */}
 
         <aside className="sidebar">
           <div className="sidebar-eyebrow">
@@ -408,25 +646,85 @@ function App() {
           <div className="sidebar-divider" />
 
           <div className="scenarios-title">
-            {t.scenariosTitle}
+            {t.examples}
           </div>
 
           <div className="scenarios">
-            {currentExamples.map((example) => (
-              <button
-                className="scenario"
-                key={example.label}
-                onClick={() => setQuestion(example.question)}
-              >
-                <span className="scenario-label">
-                  {example.label}
-                </span>
+            {currentExamples.map(
+              (example) => (
+                <button
+                  className="scenario"
+                  key={example.label}
+                  onClick={() =>
+                    setQuestion(
+                      example.question
+                    )
+                  }
+                >
+                  <span className="scenario-label">
+                    {example.label}
+                  </span>
 
-                <span className="scenario-description">
-                  {example.description}
+                  <span className="scenario-description">
+                    {example.description}
+                  </span>
+                </button>
+              )
+            )}
+          </div>
+
+          <div className="documents-panel">
+            <div className="documents-panel-header">
+              <span className="scenarios-title">
+                {t.documents}
+              </span>
+
+              <span className="document-count">
+                {documents.length}
+              </span>
+            </div>
+
+            <p>
+              {t.documentsDescription}
+            </p>
+
+            <div className="document-list">
+              {documents.length === 0 ? (
+                <span className="documents-loading">
+                  {t.loadingDocuments}
                 </span>
-              </button>
-            ))}
+              ) : (
+                documents.map((document) => (
+                  <button
+                    className="document-item"
+                    key={document.name}
+                    onClick={() =>
+                      setSelectedDocument(
+                        document
+                      )
+                    }
+                  >
+                    <span className="document-icon">
+                      MD
+                    </span>
+
+                    <span className="document-info">
+                      <strong>
+                        {document.name}
+                      </strong>
+
+                      <small>
+                        {t.indexed}
+                      </small>
+                    </span>
+
+                    <span className="document-arrow">
+                      ↗
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
           </div>
 
           <div className="system-status">
@@ -437,17 +735,17 @@ function App() {
               </div>
 
               <span className="online-badge">
-                ONLINE
+                ACTIVO
               </span>
             </div>
 
-            <p>{t.statusDescription}</p>
+            <p>
+              {t.statusDescription}
+            </p>
           </div>
         </aside>
 
-        {/* ===================================================
-            CENTER
-        ==================================================== */}
+        {/* CENTRO */}
 
         <section className="main-panel">
           <div className="chat-header">
@@ -464,12 +762,15 @@ function App() {
             <textarea
               value={question}
               onChange={(event) =>
-                setQuestion(event.target.value)
+                setQuestion(
+                  event.target.value
+                )
               }
               onKeyDown={(event) => {
                 if (
                   event.key === "Enter" &&
-                  (event.ctrlKey || event.metaKey)
+                  (event.ctrlKey ||
+                    event.metaKey)
                 ) {
                   event.preventDefault();
                   analyze();
@@ -482,28 +783,39 @@ function App() {
               className="analyze-button"
               onClick={analyze}
               disabled={
-                loading || !question.trim()
+                loading ||
+                !question.trim()
               }
             >
-              {loading ? t.analyzing : t.analyze}
+              {loading
+                ? t.analyzing
+                : t.analyze}
 
-              {!loading && <span>↗</span>}
+              {!loading && (
+                <span>↗</span>
+              )}
             </button>
           </div>
 
           <div className="examples">
-            <span>{t.examples}</span>
+            <span>
+              {t.examples}
+            </span>
 
-            {currentExamples.map((example) => (
-              <button
-                key={example.label}
-                onClick={() =>
-                  setQuestion(example.question)
-                }
-              >
-                {example.label}
-              </button>
-            ))}
+            {currentExamples.map(
+              (example) => (
+                <button
+                  key={example.label}
+                  onClick={() =>
+                    setQuestion(
+                      example.question
+                    )
+                  }
+                >
+                  {example.label}
+                </button>
+              )
+            )}
           </div>
 
           {error && (
@@ -522,7 +834,7 @@ function App() {
                 {!loading && (
                   <div className="response-status">
                     <span className="status-dot" />
-                    RESPONSE GENERATED
+                    {t.generated}
                   </div>
                 )}
               </div>
@@ -539,20 +851,25 @@ function App() {
                     </p>
                   </div>
                 ) : (
-                  <article className="answer">
-                    <ReactMarkdown>
-                      {answer}
-                    </ReactMarkdown>
-                  </article>
+                  <>
+                    <SalesVisual
+                      answer={answer}
+                      language={language}
+                    />
+
+                    <article className="answer">
+                      <ReactMarkdown>
+                        {answer}
+                      </ReactMarkdown>
+                    </article>
+                  </>
                 )}
               </div>
             </section>
           )}
         </section>
 
-        {/* ===================================================
-            RIGHT
-        ==================================================== */}
+        {/* DERECHA */}
 
         <aside className="right-panel">
           <div className="section-label">
@@ -584,7 +901,9 @@ function App() {
 
                   <h3>{step.title}</h3>
 
-                  <p>{step.description}</p>
+                  <p>
+                    {step.description}
+                  </p>
                 </div>
               </div>
             ))}
@@ -600,24 +919,34 @@ function App() {
             </p>
 
             <div className="architecture-grid">
-              {architecture.map((item, index) => (
-                <div
-                  className="system-card"
-                  key={item.name}
-                >
-                  <div className="system-index">
-                    0{index + 1}
+              {architecture.map(
+                (item, index) => (
+                  <div
+                    className="system-card"
+                    key={item.name}
+                  >
+                    <div className="system-index">
+                      0{index + 1}
+                    </div>
+
+                    <span>
+                      {language === "es"
+                        ? item.typeEs
+                        : item.typeEn}
+                    </span>
+
+                    <strong>
+                      {item.name}
+                    </strong>
+
+                    <small>
+                      {language === "es"
+                        ? item.descriptionEs
+                        : item.descriptionEn}
+                    </small>
                   </div>
-
-                  <span>{item.type}</span>
-
-                  <strong>{item.name}</strong>
-
-                  <small>
-                    {item.description}
-                  </small>
-                </div>
-              ))}
+                )
+              )}
             </div>
           </div>
         </aside>
@@ -634,6 +963,65 @@ function App() {
           Swagger / OpenAPI ↗
         </a>
       </footer>
+
+      {/* VISOR DE DOCUMENTOS */}
+
+      {selectedDocument && (
+        <div
+          className="document-modal-backdrop"
+          onClick={() =>
+            setSelectedDocument(null)
+          }
+        >
+          <div
+            className="document-modal"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <div className="document-modal-header">
+              <div>
+                <span className="section-label">
+                  {t.documents}
+                </span>
+
+                <h2>
+                  {selectedDocument.name}
+                </h2>
+              </div>
+
+              <button
+                className="close-button"
+                onClick={() =>
+                  setSelectedDocument(null)
+                }
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="document-content">
+              <pre>
+                {selectedDocument.content}
+              </pre>
+            </div>
+
+            <div className="document-modal-footer">
+              <span>
+                {t.indexed}
+              </span>
+
+              <button
+                onClick={() =>
+                  setSelectedDocument(null)
+                }
+              >
+                {t.closeDocument}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
