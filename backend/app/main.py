@@ -13,7 +13,7 @@ from app.services.gemini import (
     run_agent,
 )
 from app.agent.graph import agent_graph
-
+from pathlib import Path
 
 app = FastAPI(
     title="AI Operations Platform",
@@ -105,4 +105,26 @@ async def agent_v2(
 
     return {
         "answer": final_message.content
+    }
+    @app.get("/api/documents")
+async def documents():
+
+    documents_path = Path("documents")
+
+    result = []
+
+    for path in sorted(
+        documents_path.glob("*.md")
+    ):
+        result.append(
+            {
+                "name": path.name,
+                "content": path.read_text(
+                    encoding="utf-8"
+                ),
+            }
+        )
+
+    return {
+        "documents": result
     }
